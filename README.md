@@ -1,112 +1,86 @@
-# Dự án Nhận dạng Khuôn mặt sử dụng PCA (Eigenfaces)
+# Hệ Thống Nhận Diện Khuôn Mặt (PCA & KNN)
 
-Dự án này là một triển khai thuật toán nhận dạng khuôn mặt bằng phương pháp Phân tích Thành phần chính (Principal Component Analysis - PCA), còn được biết đến với tên gọi Eigenfaces.
+Dự án nhận diện khuôn mặt Realtime sử dụng thuật toán **Eigenfaces (PCA)** để giảm chiều dữ liệu và **KNN (K-Nearest Neighbors)** để phân loại. Hệ thống hỗ trợ hiển thị thông tin chi tiết (MSSV, Lớp...) và tự động cảnh báo người lạ.
 
-## Cấu trúc thư mục
+## 🚀 Tính Năng Nổi Bật
 
-```
-PCA_Face_Recognition/
-│
-├── data/                       # Chứa dữ liệu
-│   ├── raw/                    # Dữ liệu thô (ảnh gốc, ví dụ: từ tập ORL)
-│   └── processed/              # Dữ liệu đã xử lý (nếu có)
-│
-├── src/                        # Mã nguồn chính
-│   ├── __init__.py
-│   ├── data_loader.py          # Tải và tiền xử lý dữ liệu ảnh
-│   ├── pca_engine.py           # Lớp thực hiện thuật toán PCA
-│   ├── model.py                # Lớp chứa mô hình phân loại (k-NN, SVM)
-│   └── visualization.py        # Các hàm để trực quan hóa kết quả
-│
-├── notebooks/                  # Chứa file mã nguồn để thử nghiệm
-│   └── experiment.py           # File để chạy và trực quan hóa từng bước
-│
-├── models/                     # Lưu các mô hình đã huấn luyện
-│
-├── realtime_recognition.py     # File chạy nhận dạng khuôn mặt thời gian thực qua webcam
-├── main.py                     # File chạy chính của chương trình
-├── requirements.txt            # Các thư viện Python cần thiết
-└── README.md                   # File hướng dẫn này
-```
+- **Nhận diện thời gian thực:** Tốc độ phản hồi nhanh qua Webcam.
+- **Hiển thị thông tin cá nhân:** Tự động hiện Tên, MSSV, Lớp... từ file cấu hình.
+- **Cảnh báo người lạ:** Tự động khoanh vùng **ĐỎ** và hiện "Unknown" nếu khuôn mặt không khớp với dữ liệu.
+- **Giao diện thông minh:** Cửa sổ Camera tự động căn giữa màn hình và phóng to.
+- **Dễ dàng mở rộng:** Chỉ cần thêm folder ảnh và chạy lại file train.
 
-## Hướng dẫn cài đặt và sử dụng
+---
 
-### 1. Yêu cầu
+## 🛠 Yêu Cầu Cài Đặt
 
-- Python 3.7+
-- `pip`
+Đảm bảo bạn đã cài đặt Python (3.8 trở lên). Cài đặt các thư viện cần thiết bằng lệnh sau:
 
-### 2. Cài đặt thư viện
+````bash
+pip install numpy opencv-python scikit-learn
 
-Clone repository này về máy, sau đó cài đặt các thư viện cần thiết bằng lệnh sau:
+📂 Cấu Trúc Thư Mục
+Project_Folder/
+├── data/
+│   └── raw/
+│       ├── VoVanDat/           <-- Tên thư mục là Tên hiển thị
+│       │   ├── info.json       <-- File chứa thông tin chi tiết
+│       │   ├── anh1.jpg
+│       │   ├── anh2.jpg
+│       │   └── ...
+│       ├── NguoiKhac/
+│       │   ├── info.json
+│       │   └── ...
+├── models/                     <-- Nơi chứa các file model (.pkl) sau khi train
+├── src/                        <-- Source code xử lý chính
+│   ├── data_loader.py
+│   ├── model.py
+│   ├── pca_engine.py
+│   └── ...
+├── main.py                     <-- File dùng để Huấn Luyện (Training)
+├── NhanDienKM.py               <-- File chạy Nhận Diện (Realtime)
+└── README.md
 
-```bash
-pip install -r requirements.txt
-```
+📖 Hướng Dẫn Sử Dụng
 
-### 3. Chuẩn bị dữ liệu
+### Bước 1: Chuẩn bị dữ liệu
+Hệ thống yêu cầu mỗi người dùng phải có một thư mục riêng chứa ảnh và file thông tin.
 
-1.  Tải về một tập dữ liệu khuôn mặt. Dự án này được thiết kế để hoạt động tốt với **The ORL Database of Faces**. Bạn có thể tìm và tải về từ nhiều nguồn trên mạng.
-2.  Giải nén và đặt các ảnh vào thư mục `data/raw/`.
-3.  Cấu trúc thư mục dữ liệu phải theo dạng sau: mỗi người một thư mục con.
-    ```
-    data/raw/
-    ├── s1/
-    │   ├── 1.pgm
-    │   ├── 2.pgm
-    │   └── ...
-    ├── s2/
-    │   ├── 1.pgm
-    │   └── ...
-    └── ...
+1.  Vào thư mục `data/raw/`.
+2.  Tạo thư mục mới với tên của bạn (Viết liền không dấu, ví dụ: `VoVanDat`).
+3.  Copy khoảng **10-20 tấm ảnh** khuôn mặt của bạn vào thư mục đó.
+4.  Tạo một file tên là `info.json` trong thư mục đó với nội dung như sau:
+    ```json
+    {
+        "MSV": "2100xxxx",
+        "Lop": "KTPM16A",
+        "Khoa": "CNTT"
+    }
     ```
 
-### 4. Chạy chương trình
-
-Để chạy toàn bộ quy trình (tải dữ liệu, huấn luyện PCA, huấn luyện mô hình phân loại và đánh giá), thực thi file `main.py`:
+### Bước 2: Huấn luyện mô hình
+Mỗi khi thêm người mới hoặc sửa file `info.json`, bạn cần chạy lệnh này để hệ thống học dữ liệu:
 
 ```bash
 python main.py
-```
 
-Chương trình sẽ thực hiện các bước sau:
-
-- Tải và chuẩn hóa ảnh từ `data/raw/`.
-- Chia dữ liệu thành tập huấn luyện và tập kiểm tra.
-- Huấn luyện PCA trên tập huấn luyện và hiển thị các _eigenfaces_.
-- Huấn luyện một mô hình phân loại (SVM hoặc k-NN) trên dữ liệu đã giảm chiều.
-- Đánh giá độ chính xác của mô hình trên tập kiểm tra.
-- Hiển thị một vài ví dụ về kết quả dự đoán.
-
-### 5. Nhận dạng thời gian thực
-
-Sau khi đã huấn luyện mô hình bằng cách chạy `main.py` (điều này sẽ tạo ra các file mô hình trong thư mục `models/`), bạn có thể sử dụng `realtime_recognition.py` để nhận dạng khuôn mặt qua webcam:
+### Bước 3: Chạy nhận diện
 
 ```bash
-python realtime_recognition.py
-```
+python NhanDienKM.py
 
--   Chương trình sẽ mở webcam của bạn.
--   Nó sẽ phát hiện khuôn mặt, trích xuất đặc trưng và dự đoán danh tính trong thời gian thực.
--   Nhấn phím `q` để thoát chương trình.
+Thoát chương trình: Bấm phím q hoặc nhấn nút X (Close) trên thanh tiêu đề cửa sổ.
 
-### 6. Thử nghiệm từng bước
 
-Nếu bạn muốn hiểu rõ hơn về từng bước của thuật toán, bạn có thể chạy file `notebooks/experiment.py`. File này sẽ thực hiện và trực quan hóa các bước quan trọng như:
 
-- Hiển thị ảnh mẫu.
-- Tính toán và hiển thị khuôn mặt trung bình.
-- Hiển thị các eigenfaces.
-- Tái tạo lại khuôn mặt từ không gian đã giảm chiều.
+### Bước 4: Tinh chỉnh độ nhạy (Quan trọng)
 
-```bash
-python notebooks/experiment.py
-```
+Nếu hệ thống nhận diện sai (nhận người lạ thành bạn) hoặc không nhận ra bạn (báo Unknown/màu đỏ), hãy làm như sau:
 
-### Tùy chỉnh
-
-Bạn có thể thay đổi các tham số trong file `main.py` để thử nghiệm:
-
-- `KICH_THUOC_ANH`: Kích thước ảnh sau khi chuẩn hóa.
-- `SO_THANH_PHAN_PCA`: Số lượng thành phần chính (eigenfaces) giữ lại. Thay đổi giá trị này sẽ ảnh hưởng đến độ chính xác và tốc độ.
-- `LOAI_MO_HINH`: Chọn giữa `'knn'` (mặc định) và `'svm'`.
+Mở file NhanDienKM.py.
+Tìm dòng: NGUONG_KHOANG_CACH = 2500.
+Chạy chương trình và nhìn vào màn hình Console (Terminal) để xem "Khoảng cách đo được".
+Sửa số 2500 thành giá trị phù hợp:
+Tăng lên (ví dụ 3000): Nếu hệ thống quá khắt khe, không nhận ra bạn.
+Giảm xuống (ví dụ 2000): Nếu hệ thống dễ tính, nhận nhầm người lạ.
+````
