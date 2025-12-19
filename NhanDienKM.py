@@ -4,6 +4,8 @@ import numpy as np
 import os
 import ctypes
 import json
+from PIL import Image, ImageDraw, ImageFont # Thư viện xử lý ảnh để viết tiếng Việt
+
 from src.pca_engine import DongCoPCA
 from src.model import MoHinhPhanLoai
 
@@ -16,7 +18,7 @@ PATH_INFO_MAP = 'models/info_map.pkl'
 FACE_CASCADE_PATH = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
 WINDOW_NAME = "Nhan Dien Khuon Mat"
 
-# Ngưỡng khoảng cách (Bạn tự chỉnh số này dựa trên console)
+# Ngưỡng khoảng cách
 NGUONG_KHOANG_CACH = 5000 
 
 def load_artifacts():
@@ -46,6 +48,39 @@ def center_window(cap):
         cv2.resizeWindow(WINDOW_NAME, new_w, new_h); cv2.moveWindow(WINDOW_NAME, x, y)
     except: cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
 
+# --- HÀM MỚI: VIẾT TIẾNG VIỆT ---
+def vietnamese_text(img, text, position, text_color, font_size=20, outline_color=(0,0,0)):
+    """
+    Hàm hỗ trợ viết tiếng Việt lên ảnh OpenCV
+    """
+    # 1. Chuyển từ ảnh OpenCV (numpy array) sang PIL Image
+    cv2_im_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    pil_im = Image.fromarray(cv2_im_rgb)
+    draw = ImageDraw.Draw(pil_im)
+
+    # 2. Load Font (Dùng Arial có sẵn trong Windows)
+    try:
+        # Đường dẫn font trên Windows
+        font = ImageFont.truetype("arial.ttf", font_size)
+    except IOError:
+        # Nếu không tìm thấy arial, dùng font mặc định (sẽ không đẹp bằng)
+        font = ImageFont.load_default()
+
+    # 3. Vẽ viền đen (bằng cách vẽ chữ màu đen lệch đi 1 chút nhiều lần)
+    x, y = position
+    outline_range = 2 # Độ dày viền
+    if outline_color:
+        for dx in range(-outline_range, outline_range+1):
+            for dy in range(-outline_range, outline_range+1):
+                if dx != 0 or dy != 0:
+                    draw.text((x+dx, y+dy), text, font=font, fill=outline_color)
+
+    # 4. Vẽ chữ chính
+    draw.text(position, text, font=font, fill=text_color)
+
+    # 5. Chuyển lại về ảnh OpenCV
+    return cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
+
 def main():
     pca, classifier, label_map, info_map = load_artifacts()
     if pca is None: return
@@ -68,7 +103,7 @@ def main():
         faces = face_cascade.detectMultiScale(gray, 1.1, 5, minSize=(60, 60))
 
         for (x, y, w, h) in faces:
-            box_color = (0, 255, 0) # Xanh
+            box_color = (0, 255, 0) # Xanh (BGR)
             name = "Unknown"
             
             try:
@@ -77,41 +112,42 @@ def main():
                 roi_flat = roi_resized.reshape(1, -1)
                 roi_pca = pca.transform(roi_flat)
                 
-                # Dự đoán + Lấy khoảng cách
                 y_pred, distance = classifier.predict(roi_pca, return_distance=True)
                 predicted_id = y_pred[0]
                 dist_val = distance[0]
                 
-                # Vẫn in ra console để bạn theo dõi ngầm
                 print(f"Khoảng cách: {dist_val:.2f}")
 
-                # So sánh ngưỡng
                 if dist_val > NGUONG_KHOANG_CACH:
-                    name = "Unknown"
+                    name = "Người Lạ" # Tiếng Việt
                     box_color = (0, 0, 255) # Đỏ
                 else:
                     name = label_map.get(predicted_id, "Unknown")
                     if name == "Unknown": box_color = (0, 0, 255)
 
             except Exception as e:
-                box_color = (0, 0, 255); name = "Error"
+                box_color = (0, 0, 255); name = "Lỗi"
 
-            # 1. Vẽ khung
+            # 1. Vẽ khung (Dùng OpenCV cho nhanh)
             cv2.rectangle(frame, (x, y), (x+w, y+h), box_color, 2)
             
-            # 2. Vẽ tên (Nền màu theo trạng thái)
-            cv2.rectangle(frame, (x, y-30), (x+w, y), box_color, cv2.FILLED)
-            cv2.putText(frame, name, (x + 5, y - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            # 2. Hiển thị TÊN (Dùng hàm tiếng Việt mới)
+            # Màu trắng (255, 255, 255)
+            frame = vietnamese_text(frame, name, (x, y - 30), (255, 255, 255), font_size=24, outline_color=(0,0,0))
 
-            # 3. Hiển thị thông tin chi tiết (nếu nhận diện đúng)
-            if name not in ["Unknown", "Error"] and name in info_map:
+            # 3. Hiển thị THÔNG TIN CHI TIẾT
+            if name not in ["Người Lạ", "Lỗi", "Unknown"] and name in info_map:
                 details = info_map[name]
-                current_y = y + h + 45 
+                current_y = y + h + 10 
+                
                 for key, value in details.items():
+                    # Tạo chuỗi: "Lớp: KHMTK18"
                     text_info = f"{key}: {value}"
-                    # Viền đen chữ vàng
-                    cv2.putText(frame, text_info, (x, current_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 4)
-                    cv2.putText(frame, text_info, (x, current_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+                    
+                    # Gọi hàm vẽ tiếng Việt
+                    # Màu vàng (255, 255, 0) - Lưu ý: Pillow dùng hệ màu RGB, nên Vàng là (255, 255, 0)
+                    frame = vietnamese_text(frame, text_info, (x, current_y), (255, 255, 0), font_size=18, outline_color=(0,0,0))
+                    
                     current_y += 25
 
         cv2.imshow(WINDOW_NAME, frame)

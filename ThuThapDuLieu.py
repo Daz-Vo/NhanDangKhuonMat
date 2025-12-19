@@ -16,6 +16,9 @@ def nhap_thong_tin_bo_sung(ten_nguoi):
     print(f"\n--- NHẬP THÔNG TIN CHI TIẾT CHO: {ten_nguoi} ---")
     print("(Nếu không muốn nhập, hãy bấm Enter để bỏ qua)")
     
+    ho_ten = input(">> Nhập Họ Tên: ").strip()
+    if not ho_ten: ho_ten = "Chua cap nhat"
+
     msv = input(">> Nhập Mã Sinh Viên (MSV): ").strip()
     if not msv: msv = "Chua cap nhat"
     
@@ -27,6 +30,7 @@ def nhap_thong_tin_bo_sung(ten_nguoi):
 
     # Tạo dictionary dữ liệu
     data_info = {
+        "Họ Tên": ho_ten,
         "MSV": msv,
         "Lop": lop,
         "Ghi Chu": nam_sinh

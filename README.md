@@ -21,7 +21,7 @@ Môi trường khuyến nghị: Python 3.8 trở lên.
 Cài đặt các thư viện cần thiết bằng lệnh:
 
 ```bash
-python -m pip install numpy opencv-python scikit-learn
+python -m pip install numpy opencv-python scikit-learn Pillow
 
 📂 Cấu Trúc Thư Mục
 Để hệ thống hoạt động, cấu trúc thư mục phải được sắp xếp như sau:
