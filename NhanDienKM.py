@@ -17,7 +17,7 @@ FACE_CASCADE_PATH = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml
 WINDOW_NAME = "Nhan Dien Khuon Mat"
 
 # Ngưỡng khoảng cách (Bạn tự chỉnh số này dựa trên console)
-NGUONG_KHOANG_CACH = 2500 
+NGUONG_KHOANG_CACH = 5000 
 
 def load_artifacts():
     print(">>> Đang tải models và data...")

@@ -1,86 +1,119 @@
 # Hệ Thống Nhận Diện Khuôn Mặt (PCA & KNN)
 
-Dự án nhận diện khuôn mặt Realtime sử dụng thuật toán **Eigenfaces (PCA)** để giảm chiều dữ liệu và **KNN (K-Nearest Neighbors)** để phân loại. Hệ thống hỗ trợ hiển thị thông tin chi tiết (MSSV, Lớp...) và tự động cảnh báo người lạ.
+> **Đồ án môn học: Xử lý ảnh / Trí tuệ nhân tạo**
 
-## 🚀 Tính Năng Nổi Bật
+Dự án xây dựng hệ thống điểm danh và nhận diện khuôn mặt thời gian thực (Real-time). Hệ thống sử dụng thuật toán **Principal Component Analysis (PCA - Eigenfaces)** để trích xuất đặc trưng và **K-Nearest Neighbors (KNN)** để phân loại.
 
-- **Nhận diện thời gian thực:** Tốc độ phản hồi nhanh qua Webcam.
-- **Hiển thị thông tin cá nhân:** Tự động hiện Tên, MSSV, Lớp... từ file cấu hình.
-- **Cảnh báo người lạ:** Tự động khoanh vùng **ĐỎ** và hiện "Unknown" nếu khuôn mặt không khớp với dữ liệu.
-- **Giao diện thông minh:** Cửa sổ Camera tự động căn giữa màn hình và phóng to.
-- **Dễ dàng mở rộng:** Chỉ cần thêm folder ảnh và chạy lại file train.
+## 🚀 Tính Năng Chính
+
+1. **Thu thập dữ liệu tự động:** Tool hỗ trợ chụp ảnh mẫu và nhập thông tin cá nhân (MSSV, Lớp) trực tiếp từ màn hình console.
+2. **Huấn luyện mô hình (Training):** Tự động quét toàn bộ thư mục dữ liệu, trích xuất Eigenfaces và huấn luyện bộ phân loại KNN.
+3. **Nhận diện Real-time:**
+   - Tự động căn giữa cửa sổ camera trên màn hình.
+   - Hiển thị tên và thông tin chi tiết (MSSV, Lớp...) nếu nhận diện đúng.
+   - **Cảnh báo người lạ:** Tự động khoanh vùng **MÀU ĐỎ** và hiện "Unknown" nếu khuôn mặt không khớp với dữ liệu đã học.
 
 ---
 
 ## 🛠 Yêu Cầu Cài Đặt
 
-Đảm bảo bạn đã cài đặt Python (3.8 trở lên). Cài đặt các thư viện cần thiết bằng lệnh sau:
+Môi trường khuyến nghị: Python 3.8 trở lên.
+Cài đặt các thư viện cần thiết bằng lệnh:
 
-````bash
-pip install numpy opencv-python scikit-learn
+```bash
+python -m pip install numpy opencv-python scikit-learn
 
 📂 Cấu Trúc Thư Mục
-Project_Folder/
+Để hệ thống hoạt động, cấu trúc thư mục phải được sắp xếp như sau:
+
+Plaintext
+
+Project_PCA/
 ├── data/
-│   └── raw/
-│       ├── VoVanDat/           <-- Tên thư mục là Tên hiển thị
-│       │   ├── info.json       <-- File chứa thông tin chi tiết
-│       │   ├── anh1.jpg
-│       │   ├── anh2.jpg
+│   └── raw/                <-- Nơi chứa ảnh khuôn mặt (được tạo tự động)
+│       ├── VoVanDat/
+│       │   ├── info.json   <-- File chứa thông tin: MSV, Lớp...
+│       │   ├── 0.jpg
+│       │   ├── 1.jpg
 │       │   └── ...
-│       ├── NguoiKhac/
-│       │   ├── info.json
-│       │   └── ...
-├── models/                     <-- Nơi chứa các file model (.pkl) sau khi train
-├── src/                        <-- Source code xử lý chính
-│   ├── data_loader.py
-│   ├── model.py
-│   ├── pca_engine.py
+├── models/                 <-- Nơi chứa file model sau khi train (.pkl)
+├── src/                    <-- Mã nguồn xử lý lõi
+│   ├── data_loader.py      <-- Đọc và tiền xử lý ảnh
+│   ├── pca_engine.py       <-- Class xử lý thuật toán PCA
+│   ├── model.py            <-- Class xử lý thuật toán KNN
 │   └── ...
-├── main.py                     <-- File dùng để Huấn Luyện (Training)
-├── NhanDienKM.py               <-- File chạy Nhận Diện (Realtime)
+├── ThuThapDuLieu.py        <-- [BƯỚC 1] Chạy file này để thêm người mới
+├── main.py                 <-- [BƯỚC 2] Chạy file này để huấn luyện
+├── NhanDienKM.py           <-- [BƯỚC 3] Chạy file này để nhận diện
 └── README.md
-
 📖 Hướng Dẫn Sử Dụng
+Bước 1: Thu thập dữ liệu
+Thay vì copy ảnh thủ công, hãy dùng tool tự động:
 
-### Bước 1: Chuẩn bị dữ liệu
-Hệ thống yêu cầu mỗi người dùng phải có một thư mục riêng chứa ảnh và file thông tin.
+Bash
 
-1.  Vào thư mục `data/raw/`.
-2.  Tạo thư mục mới với tên của bạn (Viết liền không dấu, ví dụ: `VoVanDat`).
-3.  Copy khoảng **10-20 tấm ảnh** khuôn mặt của bạn vào thư mục đó.
-4.  Tạo một file tên là `info.json` trong thư mục đó với nội dung như sau:
-    ```json
-    {
-        "MSV": "2100xxxx",
-        "Lop": "KTPM16A",
-        "Khoa": "CNTT"
-    }
-    ```
+python ThuThapDuLieu.py
+Nhập Tên (Viết liền không dấu, vd: NguyenVanA).
 
-### Bước 2: Huấn luyện mô hình
-Mỗi khi thêm người mới hoặc sửa file `info.json`, bạn cần chạy lệnh này để hệ thống học dữ liệu:
+Nhập MSSV, Lớp khi được hỏi.
 
-```bash
+Nhấn Enter để bật Camera.
+
+Ngồi trước camera, thay đổi nhẹ góc mặt để hệ thống chụp đủ 30 tấm ảnh.
+
+Bước 2: Huấn luyện mô hình (Training)
+Sau khi có dữ liệu người mới, cần chạy lệnh này để máy học lại:
+
+Bash
+
 python main.py
+Hệ thống sẽ tạo ra các file pca_model.pkl, knn_model.pkl và info_map.pkl trong thư mục models/.
 
-### Bước 3: Chạy nhận diện
+Bước 3: Chạy nhận diện
+Khởi động camera để kiểm tra kết quả:
 
-```bash
+Bash
+
 python NhanDienKM.py
+Thoát chương trình: Bấm phím q hoặc nút X (Close) trên cửa sổ.
 
-Thoát chương trình: Bấm phím q hoặc nhấn nút X (Close) trên thanh tiêu đề cửa sổ.
+⚙️ Tinh Chỉnh Độ Chính Xác (Quan Trọng)
+Do thuật toán PCA rất nhạy cảm với ánh sáng và thay đổi góc mặt, kết quả tính toán khoảng cách (Distance) có thể biến động lớn.
 
-
-
-### Bước 4: Tinh chỉnh độ nhạy (Quan trọng)
-
-Nếu hệ thống nhận diện sai (nhận người lạ thành bạn) hoặc không nhận ra bạn (báo Unknown/màu đỏ), hãy làm như sau:
+Nếu hệ thống nhận nhầm người lạ hoặc không nhận ra bạn (báo Unknown), hãy làm theo các bước sau:
 
 Mở file NhanDienKM.py.
-Tìm dòng: NGUONG_KHOANG_CACH = 2500.
-Chạy chương trình và nhìn vào màn hình Console (Terminal) để xem "Khoảng cách đo được".
-Sửa số 2500 thành giá trị phù hợp:
-Tăng lên (ví dụ 3000): Nếu hệ thống quá khắt khe, không nhận ra bạn.
-Giảm xuống (ví dụ 2000): Nếu hệ thống dễ tính, nhận nhầm người lạ.
-````
+
+Tìm dòng cấu hình:
+
+Python
+
+NGUONG_KHOANG_CACH = 2500
+Quan sát Terminal/Console khi chạy chương trình để xem thông số Khoảng cách đo được.
+
+Điều chỉnh:
+
+Nếu Console báo khoảng cách toàn 3000-4000 mà vẫn là bạn -> Tăng số này lên (ví dụ: 4500).
+
+Nếu người lạ vào mà khoảng cách chỉ 1000-2000 -> Giảm số này xuống.
+
+🧠 Nguyên Lý Hoạt Động
+1. Tiền xử lý
+Ảnh đầu vào được chuyển sang ảnh xám (Grayscale).
+
+Resize đồng bộ về kích thước chuẩn (92x112) để đảm bảo tính nhất quán cho ma trận.
+
+2. Trích xuất đặc trưng (PCA)
+Sử dụng thuật toán PCA (Principal Component Analysis) để giảm chiều dữ liệu.
+
+Thay vì xử lý hàng nghìn pixel, mỗi khuôn mặt được nén thành một vector đặc trưng (Eigenface) gồm khoảng 150 thành phần chính.
+
+3. Phân loại (KNN)
+Sử dụng thuật toán K-Nearest Neighbors (KNN).
+
+Hệ thống tính Khoảng cách Euclidean giữa vector khuôn mặt hiện tại và các vector đã học.
+
+Nếu Khoảng cách < Ngưỡng: Trả về tên người dùng và hiển thị thông tin.
+
+Nếu Khoảng cách > Ngưỡng: Kết luận là người lạ ("Unknown").
+```
