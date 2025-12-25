@@ -5,8 +5,8 @@ import json
 
 # --- CẤU HÌNH ---
 THU_MUC_DU_LIEU = 'data/raw'
-SO_LUONG_ANH_CAN_CHUP = 30  # Số lượng ảnh cần thu thập
-KHOANG_CACH_CHUP = 0.5      # Giây (Thời gian nghỉ giữa 2 lần chụp)
+SO_LUONG_ANH_CAN_CHUP = 60  # Số lượng ảnh cần thu thập
+KHOANG_CACH_CHUP = 0.2      # Giây (Thời gian nghỉ giữa 2 lần chụp)
 
 # Load bộ phát hiện khuôn mặt
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')

@@ -19,7 +19,7 @@ FACE_CASCADE_PATH = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml
 WINDOW_NAME = "Nhan Dien Khuon Mat"
 
 # Ngưỡng khoảng cách
-NGUONG_KHOANG_CACH = 5000 
+NGUONG_KHOANG_CACH = 4900
 
 def load_artifacts():
     print(">>> Đang tải models và data...")
@@ -81,15 +81,19 @@ def vietnamese_text(img, text, position, text_color, font_size=20, outline_color
     # 5. Chuyển lại về ảnh OpenCV
     return cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
 
+# ... (Các phần import và hàm load_artifacts, vietnamese_text giữ nguyên) ...
+
 def main():
     pca, classifier, label_map, info_map = load_artifacts()
     if pca is None: return
+    
     face_cascade = cv2.CascadeClassifier(FACE_CASCADE_PATH)
     cap = cv2.VideoCapture(0)
     if not cap.isOpened(): print("LỖI: Không thể mở Camera."); return
+    
     center_window(cap)
     
-    print(">>> Camera sẵn sàng. Bấm 'X' hoặc 'q' để thoát.")
+    print(">>> Camera sẵn sàng. Đang chạy chế độ ĐA ĐỐI TƯỢNG.")
     print(f">>> Ngưỡng khoảng cách: {NGUONG_KHOANG_CACH}")
 
     while True:
@@ -100,26 +104,43 @@ def main():
         except: pass
         
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, 1.1, 5, minSize=(60, 60))
+        
+        # --- CẢI TIẾN 1: Tăng minSize để bỏ qua người ở xa ---
+        # minSize=(30, 30) -> Quá nhỏ, dễ nhiễu
+        # minSize=(80, 80) -> Chỉ nhận diện người đứng gần, rõ nét
+        faces = face_cascade.detectMultiScale(
+            gray, 
+            scaleFactor=1.1, 
+            minNeighbors=6,     # Tăng lên 6 để lọc bớt nhiễu (khắt khe hơn)
+            minSize=(80, 80)    # Chỉ nhận diện khuôn mặt to (gần camera)
+        )
 
+        # Duyệt qua từng khuôn mặt trong đám đông
         for (x, y, w, h) in faces:
-            box_color = (0, 255, 0) # Xanh (BGR)
+            box_color = (0, 255, 0) 
             name = "Unknown"
             
             try:
+                # Cắt vùng mặt
                 roi_gray = gray[y:y+h, x:x+w]
+                
+                # --- CẢI TIẾN 2: Cân bằng sáng cho vùng mặt này ---
+                # Giúp PCA nhìn rõ mặt dù ánh sáng không đều
+                roi_gray = cv2.equalizeHist(roi_gray)
+
+                # Resize và PCA
                 roi_resized = cv2.resize(roi_gray, SIZE_OPENCV)
                 roi_flat = roi_resized.reshape(1, -1)
                 roi_pca = pca.transform(roi_flat)
                 
+                # Dự đoán
                 y_pred, distance = classifier.predict(roi_pca, return_distance=True)
                 predicted_id = y_pred[0]
                 dist_val = distance[0]
                 
-                print(f"Khoảng cách: {dist_val:.2f}")
-
+                # Logic xác định người lạ
                 if dist_val > NGUONG_KHOANG_CACH:
-                    name = "Người Lạ" # Tiếng Việt
+                    name = "Người Lạ"
                     box_color = (0, 0, 255) # Đỏ
                 else:
                     name = label_map.get(predicted_id, "Unknown")
@@ -128,30 +149,25 @@ def main():
             except Exception as e:
                 box_color = (0, 0, 255); name = "Lỗi"
 
-            # 1. Vẽ khung (Dùng OpenCV cho nhanh)
+            # Vẽ khung và thông tin
             cv2.rectangle(frame, (x, y), (x+w, y+h), box_color, 2)
             
-            # 2. Hiển thị TÊN (Dùng hàm tiếng Việt mới)
-            # Màu trắng (255, 255, 255)
-            frame = vietnamese_text(frame, name, (x, y - 30), (255, 255, 255), font_size=24, outline_color=(0,0,0))
+            # Hiển thị tên
+            frame = vietnamese_text(frame, name, (x, y - 30), (255, 255, 255), font_size=24)
 
-            # 3. Hiển thị THÔNG TIN CHI TIẾT
+            # Chỉ hiện thông tin chi tiết nếu là người quen
+            # (Tránh rối mắt khi có quá nhiều người lạ)
             if name not in ["Người Lạ", "Lỗi", "Unknown"] and name in info_map:
                 details = info_map[name]
                 current_y = y + h + 10 
-                
                 for key, value in details.items():
-                    # Tạo chuỗi: "Lớp: KHMTK18"
                     text_info = f"{key}: {value}"
-                    
-                    # Gọi hàm vẽ tiếng Việt
-                    # Màu vàng (255, 255, 0) - Lưu ý: Pillow dùng hệ màu RGB, nên Vàng là (255, 255, 0)
-                    frame = vietnamese_text(frame, text_info, (x, current_y), (255, 255, 0), font_size=18, outline_color=(0,0,0))
-                    
+                    frame = vietnamese_text(frame, text_info, (x, current_y), (255, 255, 0), font_size=18)
                     current_y += 25
 
         cv2.imshow(WINDOW_NAME, frame)
         if cv2.waitKey(1) & 0xFF == ord('q'): break
+    
     cap.release(); cv2.destroyAllWindows()
 
 if __name__ == "__main__":
