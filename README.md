@@ -1,10 +1,6 @@
 ```markdown
 # 🎓 Hệ Thống Nhận Diện Khuôn Mặt (PCA & KNN)
 
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
-![OpenCV](https://img.shields.io/badge/OpenCV-Contrib-green)
-![Status](https://img.shields.io/badge/Status-Completed-success)
-
 > **Đồ án môn học: Xử lý ảnh / Trí tuệ nhân tạo**
 
 Dự án xây dựng hệ thống điểm danh và nhận diện khuôn mặt thời gian thực (**Real-time**). Hệ thống sử dụng thuật toán **Principal Component Analysis (PCA - Eigenfaces)** để trích xuất đặc trưng và **K-Nearest Neighbors (KNN)** để phân loại.
@@ -74,6 +70,7 @@ python ThuThapDuLieu.py
 
 ```
 Dầu tiên nhập tên foder chứa ảnh: (Viết liền không dấu, vd: `NguyenVanA`).
+Tiết theo nhập thông tin để luu vào file `info.json`
 1. Nhập **Tên** của bạn (Có thể nhập tiếng việt có dấu).
 2. Nhập **MSSV**, **Lớp** khi được hỏi.
 3. Nhấn `Enter` để bật Camera.
